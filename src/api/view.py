@@ -29,10 +29,28 @@ async def get_status_rcs_numbers():
 
         logger.info(f"Found {len(rcs_numbers)} distinct RCS numbers in filings collection")
 
+        # One query instead of N find_one calls (N round-trips made Swagger / clients hang on Atlas).
+        projection = {
+            "rcs_number": 1,
+            "filings": 1,
+            "job_id": 1,
+            "created_at": 1,
+            "updated_at": 1,
+        }
+        by_rcs: dict = {}
+        if rcs_numbers:
+            for doc in filings_collection.find(
+                {"rcs_number": {"$in": rcs_numbers}},
+                projection,
+            ):
+                rcs = doc.get("rcs_number")
+                if rcs is not None and rcs not in by_rcs:
+                    by_rcs[rcs] = doc
+
         rcs_list = []
         for rcs_number in sorted(rcs_numbers):
             try:
-                filing_doc = filings_collection.find_one({"rcs_number": rcs_number})
+                filing_doc = by_rcs.get(rcs_number)
                 if filing_doc:
                     filings_dict = filing_doc.get("filings", {})
                     if not isinstance(filings_dict, dict):
