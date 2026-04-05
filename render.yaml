@@ -1,0 +1,9 @@
+# Render Blueprint — deploy from repo root so requirements.txt and main.py are found.
+# If you use a manual Web Service instead, set Root Directory to empty (not "src").
+services:
+  - type: web
+    name: testing-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
